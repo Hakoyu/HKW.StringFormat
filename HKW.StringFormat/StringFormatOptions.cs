@@ -23,6 +23,6 @@ public class StringFormatOptions
     /// <summary>
     /// 仅限有名称的成员
     /// </summary>
-    [DefaultValue(false)]
-    public bool OnlyHasNameMembers { get; set; }
+    [DefaultValue(true)]
+    public bool OnlyHasNameMembers { get; set; } = true;
 }

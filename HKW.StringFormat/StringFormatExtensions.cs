@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Text;
 using HKW.FastMember;
@@ -12,36 +13,36 @@ public static class StringFormatExtensions
 {
     #region FormatS
 
-    /// <summary>
-    /// 最简单的动态格式化, 不会获取任何成员特性
-    /// <para>
-    /// 根据成员名格式化对应的占位符, 支持 <see langword="object"/> 和 <see cref="IDictionary"/>
-    /// </para>
-    /// <para>
-    /// 若对象有相同名称的成员,则以入参顺序高的对象为主
-    /// </para>
-    /// </summary>
-    /// <param name="format">格式化字符串</param>
-    /// <param name="arg0">参数0</param>
-    /// <param name="arg1">参数1</param>
-    /// <param name="arg2">参数2</param>
-    /// <returns>格式化字符串</returns>
-    public static string FormatS(
-        this string format,
-        object arg0,
-        object arg1 = null!,
-        object arg2 = null!
-    )
-    {
-        var sb = new StringBuilder(format);
-        FormatSAction(sb, arg0);
-        if (arg1 is not null)
-            FormatSAction(sb, arg1);
-        if (arg2 is not null)
-            FormatSAction(sb, arg2);
+    ///// <summary>
+    ///// 最简单的动态格式化, 不会获取任何成员特性
+    ///// <para>
+    ///// 根据成员名格式化对应的占位符, 支持 <see langword="object"/> 和 <see cref="IDictionary"/>
+    ///// </para>
+    ///// <para>
+    ///// 若对象有相同名称的成员,则以入参顺序高的对象为主
+    ///// </para>
+    ///// </summary>
+    ///// <param name="format">格式化字符串</param>
+    ///// <param name="arg0">参数0</param>
+    ///// <param name="arg1">参数1</param>
+    ///// <param name="arg2">参数2</param>
+    ///// <returns>格式化字符串</returns>
+    //public static string FormatS(
+    //    this string format,
+    //    object arg0,
+    //    object arg1 = null!,
+    //    object arg2 = null!
+    //)
+    //{
+    //    var sb = new StringBuilder(format);
+    //    FormatSAction(sb, arg0);
+    //    if (arg1 is not null)
+    //        FormatSAction(sb, arg1);
+    //    if (arg2 is not null)
+    //        FormatSAction(sb, arg2);
 
-        return sb.ToString();
-    }
+    //    return sb.ToString();
+    //}
 
     /// <summary>
     /// 最简单的动态格式化, 不会获取任何成员特性
@@ -94,82 +95,11 @@ public static class StringFormatExtensions
     /// </para>
     /// </summary>
     /// <param name="format">格式化字符串</param>
-    /// <param name="arg0">参数0</param>
-    /// <param name="arg1">参数1</param>
-    /// <param name="arg2">参数2</param>
-    /// <returns>格式化字符串</returns>
-    public static string FormatX(
-        this string format,
-        object arg0,
-        object arg1 = null!,
-        object arg2 = null!
-    )
-    {
-        var options = StringFormatOptions.Default;
-        var sb = new StringBuilder(format);
-        FormatXAction(options, format, sb, arg0);
-        if (arg1 is not null)
-            FormatXAction(options, format, sb, arg1);
-        if (arg2 is not null)
-            FormatXAction(options, format, sb, arg2);
-
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// 动态格式化, 会获取成员特性, 使用默认设置
-    /// <para>
-    /// 根据成员名格式化对应的占位符, 支持 <see langword="object"/> 和 <see cref="IDictionary"/>
-    /// </para>
-    /// <para>
-    /// 若对象有相同名称的成员,则以入参顺序高的对象为主
-    /// </para>
-    /// </summary>
-    /// <param name="format">格式化字符串</param>
     /// <param name="args">参数</param>
     /// <returns>格式化字符串</returns>
     public static string FormatX(this string format, params object[] args)
     {
-        var options = StringFormatOptions.Default;
-        var sb = new StringBuilder(format);
-        foreach (var arg in args)
-        {
-            FormatXAction(options, format, sb, arg);
-        }
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// 动态格式化, 会获取成员特性
-    /// <para>
-    /// 根据成员名格式化对应的占位符, 支持 <see langword="object"/> 和 <see cref="IDictionary"/>
-    /// </para>
-    /// <para>
-    /// 若对象有相同名称的成员,则以入参顺序高的对象为主
-    /// </para>
-    /// </summary>
-    /// <param name="format">格式化字符串</param>
-    /// <param name="options">格式化设置</param>
-    /// <param name="arg0">参数0</param>
-    /// <param name="arg1">参数1</param>
-    /// <param name="arg2">参数2</param>
-    /// <returns>格式化字符串</returns>
-    public static string FormatX(
-        this string format,
-        StringFormatOptions options,
-        object arg0,
-        object arg1 = null!,
-        object arg2 = null!
-    )
-    {
-        var sb = new StringBuilder(format);
-        FormatXAction(options, format, sb, arg0);
-        if (arg1 is not null)
-            FormatXAction(options, format, sb, arg1);
-        if (arg2 is not null)
-            FormatXAction(options, format, sb, arg2);
-
-        return sb.ToString();
+        return FormatX(format, StringFormatOptions.Default, args);
     }
 
     /// <summary>
@@ -191,92 +121,135 @@ public static class StringFormatExtensions
         params object[] args
     )
     {
-        var sb = new StringBuilder(format);
-        foreach (var arg in args)
+        var formatNames = new List<FormatName>();
+        Span<char> nameSpan = stackalloc char[options.MaximumMemberNameLength];
+        var nameMaxIndex = nameSpan.Length - 1;
+        var nameIndex = nameMaxIndex;
+        var argDatas = GetArgDatas(options, args);
+        for (var i = 0; i < format.Length; i++)
         {
-            FormatXAction(options, format, sb, arg);
+            var c = format[i];
+            if (c == '{')
+            {
+                nameIndex = 0;
+            }
+            else if (c == '}')
+            {
+                var name = new string(nameSpan[..nameIndex]);
+                for (var j = 0; j < argDatas.Length; j++)
+                {
+                    var argData = argDatas[j];
+                    if (argData.Arg is IDictionary dictionary)
+                    {
+                        if (dictionary.Contains(name))
+                            formatNames.Add(
+                                new(name, i - name.Length - 1, dictionary[name]!.ToString()!)
+                            );
+                    }
+                    else
+                    {
+                        var formatName = name;
+                        if (argData.MemberByFormatName!.TryGetValue(name, out var member) is false)
+                            continue;
+
+                        if (
+                            argData.Accessor!.TryGetValue(argData.Arg, member.Name, out var value)
+                            is false
+                        )
+                            continue;
+                        formatNames.Add(new(name, i - name.Length - 1, value.ToString()!));
+                    }
+                }
+                nameIndex = nameMaxIndex;
+            }
+            else if (nameIndex < nameMaxIndex)
+            {
+                if (c == '\n' || c == '\r')
+                {
+                    nameIndex = nameMaxIndex;
+                    continue;
+                }
+                nameSpan[nameIndex++] = c;
+            }
+        }
+
+        var sb = new StringBuilder();
+        var lastIndex = 0;
+        for (var i = 0; i < formatNames.Count; i++)
+        {
+            var formatName = formatNames[i];
+            var dataLength = formatName.Index - lastIndex;
+            sb.Append(format, lastIndex, dataLength);
+            sb.Append(formatName.Value);
+            lastIndex += dataLength + formatName.Name.Length + 2;
+        }
+
+        if (lastIndex < format.Length)
+        {
+            sb.Append(format, lastIndex, format.Length - lastIndex);
         }
         return sb.ToString();
     }
 
-    private static StringBuilder FormatXAction(
-        StringFormatOptions options,
-        string format,
-        StringBuilder sb,
-        object obj
-    )
+    private static ArgData[] GetArgDatas(StringFormatOptions options, object[] args)
     {
-        if (obj is IDictionary dictionary)
+        if (options.OnlyHasNameMembers)
         {
-            FormatDictionaryAction(sb, dictionary);
+            return args.Select(static a =>
+                {
+                    var accessor = a is IDictionary ? null : TypeAccessor.Create(a.GetType());
+                    return new ArgData(
+                        a,
+                        accessor,
+                        accessor
+                            ?.GetMembers()
+                            .Where(static m =>
+                                m.IsDefined(typeof(FormatIgnoreAttribute)) is false
+                                && m.IsDefined(typeof(FormatNameAttribute))
+                            )
+                            .ToImmutableDictionary(
+                                static m =>
+                                {
+                                    var attribute = (FormatNameAttribute)
+                                        m.GetAttribute(typeof(FormatNameAttribute), false)!;
+                                    if (string.IsNullOrWhiteSpace(attribute.Name) is false)
+                                        return attribute.Name;
+                                    return m.Name;
+                                },
+                                m => m.MemberInfo
+                            )
+                    );
+                })
+                .ToArray();
         }
         else
         {
-            FormatXObjectAction(options, format, sb, obj);
-        }
-        return sb;
-    }
-
-    private static void FormatXObjectAction(
-        StringFormatOptions options,
-        string format,
-        StringBuilder sb,
-        object obj
-    )
-    {
-        var accessor = TypeAccessor.Create(obj.GetType());
-        Span<char> nameSpan = stackalloc char[options.MaximumMemberNameLength];
-        var nameMaxIndex = options.MaximumMemberNameLength - 1;
-        var nameIndex = -1;
-        for (var i = format.Length - 1; i >= 0; i--)
-        {
-            var c = format[i];
-            if (c == '}')
-            {
-                nameIndex = nameMaxIndex;
-            }
-            else if (c == '{')
-            {
-                var name = nameSpan[(nameIndex + 1)..^0].ToString();
-                var formatName = name;
-                if (accessor.GetMemberDictionary().TryGetValue(name, out var member) is false)
-                    continue;
-
-                if (Attribute.IsDefined(member.MemberInfo, typeof(FormatIgnoreAttribute)))
-                    continue;
-
-                if (Attribute.IsDefined(member.MemberInfo, typeof(FormatNameAttribute)))
+            return args.Select(static a =>
                 {
-                    var attribute = (FormatNameAttribute)
-                        Attribute.GetCustomAttribute(
-                            member.MemberInfo,
-                            typeof(FormatNameAttribute)
-                        )!;
-                    if (string.IsNullOrWhiteSpace(attribute.Name))
-                        formatName = attribute.Name;
-                }
-                else if (options.OnlyHasNameMembers)
-                {
-                    continue;
-                }
-
-                sb.Replace(
-                    $"{{{formatName}}}",
-                    accessor[obj, name].ToString(),
-                    i,
-                    nameMaxIndex - nameIndex + 2
-                );
-                nameIndex = 0;
-            }
-            else if (nameIndex >= 0)
-            {
-                if (c == '\n' || c == '\r')
-                {
-                    nameIndex = -1;
-                    continue;
-                }
-                nameSpan[nameIndex--] = c;
-            }
+                    var accessor = a is IDictionary ? null : TypeAccessor.Create(a.GetType());
+                    return new ArgData(
+                        a,
+                        accessor,
+                        accessor
+                            ?.GetMembers()
+                            .Where(static m => m.IsDefined(typeof(FormatIgnoreAttribute)) is false)
+                            .ToImmutableDictionary(
+                                static m =>
+                                {
+                                    if (m.IsDefined(typeof(FormatNameAttribute)))
+                                    {
+                                        var attribute = (FormatNameAttribute)
+                                            m.GetAttribute(typeof(FormatNameAttribute), false)!;
+                                        if (string.IsNullOrWhiteSpace(attribute.Name) is false)
+                                            return attribute.Name;
+                                    }
+                                    return m.Name;
+                                },
+                                m => m.MemberInfo
+                            )
+                    );
+                })
+                .ToArray();
         }
     }
     #endregion
@@ -289,3 +262,23 @@ public static class StringFormatExtensions
         }
     }
 }
+
+/// <summary>
+/// 格式化信息
+/// </summary>
+/// <param name="Name">名称</param>
+/// <param name="Index">索引值</param>
+/// <param name="Value">格式化的值</param>
+public readonly record struct FormatName(string Name, int Index, string Value);
+
+/// <summary>
+/// 参数信息
+/// </summary>
+/// <param name="Arg">参数</param>
+/// <param name="Accessor">类型访问器</param>
+/// <param name="MemberByFormatName">成员和格式化名称</param>
+public readonly record struct ArgData(
+    object Arg,
+    TypeAccessor? Accessor,
+    ImmutableDictionary<string, MemberInfo>? MemberByFormatName
+);
