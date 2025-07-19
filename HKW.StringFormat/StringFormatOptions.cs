@@ -19,4 +19,10 @@ public class StringFormatOptions
     /// </summary>
     [DefaultValue(1024)]
     public int MaximumMemberNameLength { get; set; } = 1024;
+
+    /// <summary>
+    /// 仅限有名称的成员
+    /// </summary>
+    [DefaultValue(false)]
+    public bool OnlyHasNameMembers { get; set; }
 }

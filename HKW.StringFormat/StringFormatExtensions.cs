@@ -252,7 +252,12 @@ public static class StringFormatExtensions
                             member.MemberInfo,
                             typeof(FormatNameAttribute)
                         )!;
-                    formatName = attribute.Name;
+                    if (string.IsNullOrWhiteSpace(attribute.Name))
+                        formatName = attribute.Name;
+                }
+                else if (options.OnlyHasNameMembers)
+                {
+                    continue;
                 }
 
                 sb.Replace(

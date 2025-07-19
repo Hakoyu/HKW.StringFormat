@@ -13,6 +13,19 @@ namespace HKW.HKWStringFormat;
 public sealed class FormatNameAttribute : Attribute
 {
     /// <inheritdoc/>
+    /// <summary>
+    /// 使用成员名称
+    /// </summary>
+    public FormatNameAttribute()
+    {
+        this.Name = string.Empty;
+    }
+
+    /// <inheritdoc/>
+    /// <summary>
+    /// 使用指定名称
+    /// </summary>
+    /// <param name="Name">名称</param>
     public FormatNameAttribute(string Name)
     {
         this.Name = Name;
