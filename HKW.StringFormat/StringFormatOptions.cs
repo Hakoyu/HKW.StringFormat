@@ -25,4 +25,11 @@ public class StringFormatOptions
     /// </summary>
     [DefaultValue(true)]
     public bool OnlyHasNameMembers { get; set; } = true;
+
+    /// <summary>
+    /// 格式化 <see langword="null"/> 值
+    /// <para><c>{FormatName}</c>是格式化名称</para>
+    /// </summary>
+    [DefaultValue("{{FormatName}.NULL}")]
+    public string FormatNullValue { get; set; } = "{{FormatName}.NULL}";
 }

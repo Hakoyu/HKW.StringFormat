@@ -4,14 +4,13 @@ internal class Program
 {
     static void Main(string[] args)
     {
-        StringFormatOptions.Default.OnlyHasNameMembers = false;
-        Console.WriteLine(
-            FormatSampleData.FormatX(StringFormatOptions.Default, new FormatSampleClass())
-        );
+        var options = new StringFormatOptions() { OnlyHasNameMembers = false };
+        //Console.WriteLine("{{FormatName}.NULL}".FormatX(new FormatData("FormatName", "123456")));
+        Console.WriteLine(FormatSampleData.FormatX(options, new FormatSampleClass()));
     }
 
     public const string FormatSampleData = """
-        AAAAAAAAAA{Content0}BBBBBBBBBB{Content0}CCCCCCCCCC{Content0}DDDDDDDDDD{Content0}EEEEEEEEEE{Content0}FFFFFFFFFF{Content0}GGGGGGGGGG{Content0}HHHHHHHHHH{Content0}IIIIIIIIII{Content0}JJJJJJJJJJ{Content0}
+        AAAAAAAAAA{Content00}BBBBBBBBBB{Content0}CCCCCCCCCC{Content00}DDDDDDDDDD{Content0}EEEEEEEEEE{Content00}FFFFFFFFFF{Content0}GGGGGGGGGG{Content00}HHHHHHHHHH{Content0}IIIIIIIIII{Content00}JJJJJJJJJJ{Content0}
         AAAAAAAAAA{Content1}BBBBBBBBBB{Content1}CCCCCCCCCC{Content1}DDDDDDDDDD{Content1}EEEEEEEEEE{Content1}FFFFFFFFFF{Content1}GGGGGGGGGG{Content1}HHHHHHHHHH{Content1}IIIIIIIIII{Content1}JJJJJJJJJJ{Content1}
         AAAAAAAAAA{Content2}BBBBBBBBBB{Content2}CCCCCCCCCC{Content2}DDDDDDDDDD{Content2}EEEEEEEEEE{Content2}FFFFFFFFFF{Content2}GGGGGGGGGG{Content2}HHHHHHHHHH{Content2}IIIIIIIIII{Content2}JJJJJJJJJJ{Content2}
         AAAAAAAAAA{Content3}BBBBBBBBBB{Content3}CCCCCCCCCC{Content3}DDDDDDDDDD{Content3}EEEEEEEEEE{Content3}FFFFFFFFFF{Content3}GGGGGGGGGG{Content3}HHHHHHHHHH{Content3}IIIIIIIIII{Content3}JJJJJJJJJJ{Content3}
@@ -27,7 +26,7 @@ internal class Program
 
 internal class FormatSampleClass
 {
-    [FormatName("FormatSampleClass.Content0")]
+    [FormatName("Content00")]
     public string Content0 { get; } = $" {nameof(Content0)} ";
 
     public string Content1 { get; } = $" {nameof(Content1)} ";
@@ -46,7 +45,7 @@ internal class FormatSampleClass
 
     public string Content8 { get; } = $" {nameof(Content8)} ";
 
-    public string Content9 { get; } = $" {nameof(Content9)} ";
+    public string? Content9 { get; } = null;
 }
 
 internal class FormatSampleClass0

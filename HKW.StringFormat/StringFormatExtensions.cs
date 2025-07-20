@@ -11,41 +11,9 @@ namespace HKW.HKWStringFormat;
 /// </summary>
 public static class StringFormatExtensions
 {
-    #region FormatS
-
-    ///// <summary>
-    ///// 最简单的动态格式化, 不会获取任何成员特性
-    ///// <para>
-    ///// 根据成员名格式化对应的占位符, 支持 <see langword="object"/> 和 <see cref="IDictionary"/>
-    ///// </para>
-    ///// <para>
-    ///// 若对象有相同名称的成员,则以入参顺序高的对象为主
-    ///// </para>
-    ///// </summary>
-    ///// <param name="format">格式化字符串</param>
-    ///// <param name="arg0">参数0</param>
-    ///// <param name="arg1">参数1</param>
-    ///// <param name="arg2">参数2</param>
-    ///// <returns>格式化字符串</returns>
-    //public static string FormatS(
-    //    this string format,
-    //    object arg0,
-    //    object arg1 = null!,
-    //    object arg2 = null!
-    //)
-    //{
-    //    var sb = new StringBuilder(format);
-    //    FormatSAction(sb, arg0);
-    //    if (arg1 is not null)
-    //        FormatSAction(sb, arg1);
-    //    if (arg2 is not null)
-    //        FormatSAction(sb, arg2);
-
-    //    return sb.ToString();
-    //}
-
+    #region FormatX
     /// <summary>
-    /// 最简单的动态格式化, 不会获取任何成员特性
+    /// 动态格式化, 会获取成员特性, 使用默认设置
     /// <para>
     /// 根据成员名格式化对应的占位符, 支持 <see langword="object"/> 和 <see cref="IDictionary"/>
     /// </para>
@@ -54,37 +22,38 @@ public static class StringFormatExtensions
     /// </para>
     /// </summary>
     /// <param name="format">格式化字符串</param>
-    /// <param name="args">参数</param>
+    /// <param name="arg">参数</param>
     /// <returns>格式化字符串</returns>
-    public static string FormatS(this string format, params object[] args)
+    public static string FormatX(this string format, object arg)
     {
-        var sb = new StringBuilder(format);
-        foreach (var arg in args)
-        {
-            FormatSAction(sb, arg);
-        }
-        return sb.ToString();
+        return FormatX(format, StringFormatOptions.Default, arg);
     }
 
-    private static void FormatSAction(StringBuilder sb, object obj)
+    /// <summary>
+    /// 动态格式化, 会获取成员特性
+    /// <para>
+    /// 根据成员名格式化对应的占位符, 支持 <see langword="object"/> 和 <see cref="IDictionary"/>
+    /// </para>
+    /// <para>
+    /// 若对象有相同名称的成员,则以入参顺序高的对象为主
+    /// </para>
+    /// </summary>
+    /// <param name="format">格式化字符串</param>
+    /// <param name="options">格式化设置</param>
+    /// <param name="arg">参数</param>
+    /// <returns>格式化字符串</returns>
+    public static string FormatX(this string format, StringFormatOptions options, object arg)
     {
-        if (obj is IDictionary dictionary)
+        if (arg is FormatData formatData)
         {
-            FormatDictionaryAction(sb, dictionary);
+            return format.Replace(formatData.Name, formatData.Value.ToString());
         }
         else
         {
-            var accessor = TypeAccessor.Create(obj.GetType());
-            foreach (var member in accessor.GetMembers())
-            {
-                sb.Replace($"{{{member.Name}}}", accessor[obj, member.Name].ToString());
-            }
+            return FormatX(format, options, args: arg);
         }
     }
 
-    #endregion
-
-    #region FormatX
     /// <summary>
     /// 动态格式化, 会获取成员特性, 使用默认设置
     /// <para>
@@ -125,7 +94,7 @@ public static class StringFormatExtensions
         Span<char> nameSpan = stackalloc char[options.MaximumMemberNameLength];
         var nameMaxIndex = nameSpan.Length - 1;
         var nameIndex = nameMaxIndex;
-        Dictionary<string, object> valueByFormatName = GetValueByFormatName(options, args);
+        var valueByFormatName = GetValueByFormatName(options, args);
         for (var i = 0; i < format.Length; i++)
         {
             var c = format[i];
@@ -137,7 +106,7 @@ public static class StringFormatExtensions
             {
                 var name = new string(nameSpan[..nameIndex]);
                 if (valueByFormatName.TryGetValue(name, out var value))
-                    formatNames.Add(new(name, i - name.Length - 1, value.ToString()!));
+                    formatNames.Add(new(name, i - name.Length - 1, value));
                 nameIndex = nameMaxIndex;
             }
             else if (nameIndex < nameMaxIndex)
@@ -158,7 +127,14 @@ public static class StringFormatExtensions
             var formatName = formatNames[i];
             var dataLength = formatName.Index - lastIndex;
             sb.Append(format, lastIndex, dataLength);
-            sb.Append(formatName.Value);
+            // 添加值
+            sb.Append(
+                formatName.Value?.ToString()
+                    ?? options.FormatNullValue.FormatX(
+                        options,
+                        new FormatData("{FormatName}", formatName.Name)
+                    )
+            );
             lastIndex += dataLength + formatName.Name.Length + 2;
         }
 
@@ -169,12 +145,12 @@ public static class StringFormatExtensions
         return sb.ToString();
     }
 
-    private static Dictionary<string, object> GetValueByFormatName(
+    private static Dictionary<string, object?> GetValueByFormatName(
         StringFormatOptions options,
-        object[] args
+        params object[] args
     )
     {
-        var valueByFormatName = new Dictionary<string, object>();
+        var valueByFormatName = new Dictionary<string, object?>();
         for (var i = 0; i < args.Length; i++)
         {
             var arg = args[i];
@@ -182,7 +158,18 @@ public static class StringFormatExtensions
             {
                 foreach (DictionaryEntry de in dictionary)
                 {
-                    valueByFormatName.TryAdd(de.Key.ToString()!, de.Value!);
+                    valueByFormatName.TryAdd(de.Key.ToString()!, de.Value);
+                }
+            }
+            else if (arg is FormatData formatData)
+            {
+                valueByFormatName.TryAdd(formatData.Name, formatData.Value);
+            }
+            else if (arg is IEnumerable<FormatData> formatDatas)
+            {
+                foreach (var data in formatDatas)
+                {
+                    valueByFormatName.TryAdd(data.Name, data.Value);
                 }
             }
             else
@@ -206,12 +193,62 @@ public static class StringFormatExtensions
                     {
                         continue;
                     }
-                    valueByFormatName.Add(formatName, accessor[arg, member.Name]);
+                    valueByFormatName.TryAdd(formatName, accessor[arg, member.Name]);
                 }
             }
         }
 
         return valueByFormatName;
+    }
+
+    private static KeyValuePair<string, object?>? GetFormatNameAndValue(
+        StringFormatOptions options,
+        object arg
+    )
+    {
+        if (arg is IDictionary dictionary)
+        {
+            foreach (DictionaryEntry de in dictionary)
+            {
+                return new(de.Key.ToString()!, de.Value!);
+            }
+        }
+        else if (arg is FormatData formatData)
+        {
+            return new(formatData.Name, formatData.Value);
+        }
+        else if (arg is IEnumerable<FormatData> formatDatas)
+        {
+            foreach (var data in formatDatas)
+            {
+                return new(data.Name, data.Value);
+            }
+        }
+        else
+        {
+            var accessor = TypeAccessor.Create(arg.GetType());
+            var members = accessor.GetMembers();
+            for (var j = 0; j < members.Length; j++)
+            {
+                var member = members[j];
+                var formatName = member.Name;
+                if (member.IsDefined(typeof(FormatIgnoreAttribute)))
+                    continue;
+                if (member.IsDefined(typeof(FormatNameAttribute)))
+                {
+                    var attribute = (FormatNameAttribute)
+                        member.GetAttribute(typeof(FormatNameAttribute), false)!;
+                    if (string.IsNullOrWhiteSpace(attribute.Name) is false)
+                        formatName = attribute.Name;
+                }
+                else if (options.OnlyHasNameMembers)
+                {
+                    continue;
+                }
+                return new(formatName, accessor[arg, member.Name]);
+            }
+        }
+        return null;
     }
     #endregion
 
@@ -230,16 +267,4 @@ public static class StringFormatExtensions
 /// <param name="Name">名称</param>
 /// <param name="Index">索引值</param>
 /// <param name="Value">格式化的值</param>
-public readonly record struct FormatName(string Name, int Index, string Value);
-
-/// <summary>
-/// 参数信息
-/// </summary>
-/// <param name="Arg">参数</param>
-/// <param name="Accessor">类型访问器</param>
-/// <param name="MemberByFormatName">成员和格式化名称</param>
-public readonly record struct ArgData(
-    object Arg,
-    TypeAccessor? Accessor,
-    ImmutableDictionary<string, MemberInfo>? MemberByFormatName
-);
+internal readonly record struct FormatName(string Name, int Index, object? Value);
