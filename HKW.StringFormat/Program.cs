@@ -4,22 +4,9 @@ internal class Program
 {
     static void Main(string[] args)
     {
-        //StringFormatOptions.Default.OnlyHasNameMembers = true;
+        StringFormatOptions.Default.OnlyHasNameMembers = false;
         Console.WriteLine(
-            FormatSampleData.FormatX(
-                StringFormatOptions.Default,
-                new FormatSampleClass(),
-                new FormatSampleClass0(),
-                new FormatSampleClass1(),
-                new FormatSampleClass2(),
-                new FormatSampleClass3(),
-                new FormatSampleClass4(),
-                new FormatSampleClass5(),
-                new FormatSampleClass6(),
-                new FormatSampleClass7(),
-                new FormatSampleClass8(),
-                new FormatSampleClass9()
-            )
+            FormatSampleData.FormatX(StringFormatOptions.Default, new FormatSampleClass())
         );
     }
 
@@ -34,17 +21,32 @@ internal class Program
         AAAAAAAAAA{Content7}BBBBBBBBBB{Content7}CCCCCCCCCC{Content7}DDDDDDDDDD{Content7}EEEEEEEEEE{Content7}FFFFFFFFFF{Content7}GGGGGGGGGG{Content7}HHHHHHHHHH{Content7}IIIIIIIIII{Content7}JJJJJJJJJJ{Content7}
         AAAAAAAAAA{Content8}BBBBBBBBBB{Content8}CCCCCCCCCC{Content8}DDDDDDDDDD{Content8}EEEEEEEEEE{Content8}FFFFFFFFFF{Content8}GGGGGGGGGG{Content8}HHHHHHHHHH{Content8}IIIIIIIIII{Content8}JJJJJJJJJJ{Content8}
         AAAAAAAAAA{Content9}BBBBBBBBBB{Content9}CCCCCCCCCC{Content9}DDDDDDDDDD{Content9}EEEEEEEEEE{Content9}FFFFFFFFFF{Content9}GGGGGGGGGG{Content9}HHHHHHHHHH{Content9}IIIIIIIIII{Content9}JJJJJJJJJJ{Content9}
-        ??????????
+        ??????????{FormatSampleClass.Content0}
         """;
 }
 
 internal class FormatSampleClass
 {
-    [FormatName("ChapterTitle")]
-    public string Title { get; set; } = "FormatSampleClass.ChapterTitle";
+    [FormatName("FormatSampleClass.Content0")]
+    public string Content0 { get; } = $" {nameof(Content0)} ";
 
-    [FormatName("ChapterContent")]
-    public string Text { get; set; } = "FormatSampleClass.ChapterContent";
+    public string Content1 { get; } = $" {nameof(Content1)} ";
+
+    public string Content2 { get; } = $" {nameof(Content2)} ";
+
+    public string Content3 { get; } = $" {nameof(Content3)} ";
+
+    public string Content4 { get; } = $" {nameof(Content4)} ";
+
+    public string Content5 { get; } = $" {nameof(Content5)} ";
+
+    public string Content6 { get; } = $" {nameof(Content6)} ";
+
+    public string Content7 { get; } = $" {nameof(Content7)} ";
+
+    public string Content8 { get; } = $" {nameof(Content8)} ";
+
+    public string Content9 { get; } = $" {nameof(Content9)} ";
 }
 
 internal class FormatSampleClass0

@@ -125,7 +125,7 @@ public static class StringFormatExtensions
         Span<char> nameSpan = stackalloc char[options.MaximumMemberNameLength];
         var nameMaxIndex = nameSpan.Length - 1;
         var nameIndex = nameMaxIndex;
-        var argDatas = GetArgDatas(options, args);
+        Dictionary<string, object> valueByFormatName = GetValueByFormatName(options, args);
         for (var i = 0; i < format.Length; i++)
         {
             var c = format[i];
@@ -136,30 +136,8 @@ public static class StringFormatExtensions
             else if (c == '}')
             {
                 var name = new string(nameSpan[..nameIndex]);
-                for (var j = 0; j < argDatas.Length; j++)
-                {
-                    var argData = argDatas[j];
-                    if (argData.Arg is IDictionary dictionary)
-                    {
-                        if (dictionary.Contains(name))
-                            formatNames.Add(
-                                new(name, i - name.Length - 1, dictionary[name]!.ToString()!)
-                            );
-                    }
-                    else
-                    {
-                        var formatName = name;
-                        if (argData.MemberByFormatName!.TryGetValue(name, out var member) is false)
-                            continue;
-
-                        if (
-                            argData.Accessor!.TryGetValue(argData.Arg, member.Name, out var value)
-                            is false
-                        )
-                            continue;
-                        formatNames.Add(new(name, i - name.Length - 1, value.ToString()!));
-                    }
-                }
+                if (valueByFormatName.TryGetValue(name, out var value))
+                    formatNames.Add(new(name, i - name.Length - 1, value.ToString()!));
                 nameIndex = nameMaxIndex;
             }
             else if (nameIndex < nameMaxIndex)
@@ -191,66 +169,49 @@ public static class StringFormatExtensions
         return sb.ToString();
     }
 
-    private static ArgData[] GetArgDatas(StringFormatOptions options, object[] args)
+    private static Dictionary<string, object> GetValueByFormatName(
+        StringFormatOptions options,
+        object[] args
+    )
     {
-        if (options.OnlyHasNameMembers)
+        var valueByFormatName = new Dictionary<string, object>();
+        for (var i = 0; i < args.Length; i++)
         {
-            return args.Select(static a =>
+            var arg = args[i];
+            if (arg is IDictionary dictionary)
+            {
+                foreach (DictionaryEntry de in dictionary)
                 {
-                    var accessor = a is IDictionary ? null : TypeAccessor.Create(a.GetType());
-                    return new ArgData(
-                        a,
-                        accessor,
-                        accessor
-                            ?.GetMembers()
-                            .Where(static m =>
-                                m.IsDefined(typeof(FormatIgnoreAttribute)) is false
-                                && m.IsDefined(typeof(FormatNameAttribute))
-                            )
-                            .ToImmutableDictionary(
-                                static m =>
-                                {
-                                    var attribute = (FormatNameAttribute)
-                                        m.GetAttribute(typeof(FormatNameAttribute), false)!;
-                                    if (string.IsNullOrWhiteSpace(attribute.Name) is false)
-                                        return attribute.Name;
-                                    return m.Name;
-                                },
-                                m => m.MemberInfo
-                            )
-                    );
-                })
-                .ToArray();
-        }
-        else
-        {
-            return args.Select(static a =>
+                    valueByFormatName.TryAdd(de.Key.ToString()!, de.Value!);
+                }
+            }
+            else
+            {
+                var accessor = TypeAccessor.Create(arg.GetType());
+                var members = accessor.GetMembers();
+                for (var j = 0; j < members.Length; j++)
                 {
-                    var accessor = a is IDictionary ? null : TypeAccessor.Create(a.GetType());
-                    return new ArgData(
-                        a,
-                        accessor,
-                        accessor
-                            ?.GetMembers()
-                            .Where(static m => m.IsDefined(typeof(FormatIgnoreAttribute)) is false)
-                            .ToImmutableDictionary(
-                                static m =>
-                                {
-                                    if (m.IsDefined(typeof(FormatNameAttribute)))
-                                    {
-                                        var attribute = (FormatNameAttribute)
-                                            m.GetAttribute(typeof(FormatNameAttribute), false)!;
-                                        if (string.IsNullOrWhiteSpace(attribute.Name) is false)
-                                            return attribute.Name;
-                                    }
-                                    return m.Name;
-                                },
-                                m => m.MemberInfo
-                            )
-                    );
-                })
-                .ToArray();
+                    var member = members[j];
+                    var formatName = member.Name;
+                    if (member.IsDefined(typeof(FormatIgnoreAttribute)))
+                        continue;
+                    if (member.IsDefined(typeof(FormatNameAttribute)))
+                    {
+                        var attribute = (FormatNameAttribute)
+                            member.GetAttribute(typeof(FormatNameAttribute), false)!;
+                        if (string.IsNullOrWhiteSpace(attribute.Name) is false)
+                            formatName = attribute.Name;
+                    }
+                    else if (options.OnlyHasNameMembers)
+                    {
+                        continue;
+                    }
+                    valueByFormatName.Add(formatName, accessor[arg, member.Name]);
+                }
+            }
         }
+
+        return valueByFormatName;
     }
     #endregion
 
