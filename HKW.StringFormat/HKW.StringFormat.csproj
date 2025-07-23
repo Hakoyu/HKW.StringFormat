@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Version>0.1.4</Version>
+    <Version>0.1.5</Version>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -32,7 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="HKW.FastMember" Version="1.2.4" />
+    <PackageReference Include="HKW.FastMember" Version="1.2.5" />
   </ItemGroup>
 
 </Project>
