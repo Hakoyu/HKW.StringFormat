@@ -180,12 +180,12 @@ public static class StringFormatExtensions
                 {
                     var member = members[j];
                     var formatName = member.Name;
-                    if (member.IsDefined(typeof(FormatIgnoreAttribute)))
+                    if (member.IsDefined<FormatIgnoreAttribute>())
                         continue;
-                    if (member.IsDefined(typeof(FormatNameAttribute)))
+                    if (member.IsDefined<FormatNameAttribute>())
                     {
                         var attribute = (FormatNameAttribute)
-                            member.GetAttribute(typeof(FormatNameAttribute), false)!;
+                            member.GetAttribute<FormatNameAttribute>()!;
                         if (string.IsNullOrWhiteSpace(attribute.Name) is false)
                             formatName = attribute.Name;
                     }
@@ -232,12 +232,12 @@ public static class StringFormatExtensions
             {
                 var member = members[j];
                 var formatName = member.Name;
-                if (member.IsDefined(typeof(FormatIgnoreAttribute)))
+                if (member.IsDefined<FormatIgnoreAttribute>())
                     continue;
-                if (member.IsDefined(typeof(FormatNameAttribute)))
+                if (member.IsDefined<FormatNameAttribute>())
                 {
                     var attribute = (FormatNameAttribute)
-                        member.GetAttribute(typeof(FormatNameAttribute), false)!;
+                        member.GetAttribute<FormatNameAttribute>()!;
                     if (string.IsNullOrWhiteSpace(attribute.Name) is false)
                         formatName = attribute.Name;
                 }
